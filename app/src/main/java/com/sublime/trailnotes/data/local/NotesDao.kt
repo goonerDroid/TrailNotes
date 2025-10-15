@@ -9,7 +9,7 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface NotesDao {
 
-    @Query("SELECT * FROM notes WHERE deletedAt IS NULL ORDER BY updatedAt DESC")
+    @Query("SELECT * FROM notes WHERE deletedAt IS NULL ORDER BY updatedAt DESC, createdAt DESC")
     fun observeAll(): Flow<List<NoteEntity>>
 
     @Query("SELECT * FROM notes WHERE id = :id")
