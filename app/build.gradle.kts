@@ -2,7 +2,7 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
-    alias(libs.plugins.ksp)
+    id("org.jetbrains.kotlin.kapt")
 }
 
 android {
@@ -52,17 +52,21 @@ dependencies {
     implementation(libs.androidx.compose.material3)
     implementation(libs.room.runtime)
     implementation(libs.room.ktx)
-    ksp(libs.room.compiler)
+    kapt(libs.room.compiler)
     implementation(libs.koin.android)
     implementation(libs.koin.core)
+    implementation(libs.koin.androidx.compose)
     implementation(libs.work.runtime)
     implementation(libs.paging.runtime)
+    implementation(libs.paging.compose)
     implementation(libs.datastore.preferences)
     implementation(libs.datastore.core)
     implementation(libs.retrofit)
     implementation(libs.retrofit.gson)
     implementation(libs.okhttp)
     implementation(libs.okhttp.logging)
+    implementation(libs.androidx.lifecycle.runtime.compose)
+    implementation(libs.androidx.lifecycle.viewmodel.compose)
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
