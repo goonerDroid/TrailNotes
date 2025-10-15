@@ -2,8 +2,6 @@ package com.sublime.trailnotes.ui.notes
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import androidx.paging.PagingData
-import androidx.paging.cachedIn
 import com.sublime.trailnotes.data.NotesRepository
 import com.sublime.trailnotes.domain.Note
 import com.sublime.trailnotes.sync.SyncScheduler
@@ -23,10 +21,9 @@ class NotesViewModel(
     private val clock: Clock
 ) : ViewModel() {
 
-    val notes: StateFlow<PagingData<Note>> =
-        repository.pagedNotes()
-            .cachedIn(viewModelScope)
-            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), PagingData.empty())
+    val notes: StateFlow<List<Note>> =
+        repository.notes()
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     val uiState: StateFlow<NotesUiState> = repository
         .lastSuccessfulSync()

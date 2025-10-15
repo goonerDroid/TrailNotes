@@ -52,7 +52,6 @@ dependencies {
     implementation(libs.androidx.compose.material3)
     implementation(libs.room.runtime)
     implementation(libs.room.ktx)
-    implementation(libs.room.paging)
     kapt(libs.room.compiler)
     implementation(libs.koin.android)
     implementation(libs.koin.core)

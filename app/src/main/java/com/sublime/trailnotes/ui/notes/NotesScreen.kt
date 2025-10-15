@@ -2,10 +2,13 @@ package com.sublime.trailnotes.ui.notes
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Delete
@@ -24,14 +27,16 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.paging.compose.LazyPagingItems
-import androidx.paging.compose.collectAsLazyPagingItems
 import com.sublime.trailnotes.data.local.SyncState
 import com.sublime.trailnotes.domain.Note
 import com.sublime.trailnotes.ui.theme.TrailNotesTheme
@@ -44,11 +49,11 @@ fun NotesScreen(
     viewModel: NotesViewModel,
     modifier: Modifier = Modifier
 ) {
-    val pagingItems = viewModel.notes.collectAsLazyPagingItems()
+    val notes by viewModel.notes.collectAsStateWithLifecycle()
     val uiState = viewModel.uiState.collectAsStateWithLifecycle()
 
     NotesScreen(
-        notes = pagingItems,
+        notes = notes,
         uiState = uiState.value,
         onAddNote = viewModel::addSampleNote,
         onDeleteNote = viewModel::deleteNote,
@@ -64,7 +69,7 @@ fun NotesScreen(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NotesScreen(
-    notes: LazyPagingItems<Note>,
+    notes: List<Note>,
     uiState: NotesUiState,
     onAddNote: () -> Unit,
     onDeleteNote: (String) -> Unit,
@@ -103,30 +108,39 @@ fun NotesScreen(
             }
         }
     ) { contentPadding ->
-        if (notes.itemCount == 0) {
+        if (notes.isEmpty()) {
             EmptyState(
                 modifier = Modifier
                     .padding(contentPadding)
                     .fillMaxSize()
             )
         } else {
+            val listState = rememberLazyListState()
+            var lastKnownFirstId by remember { mutableStateOf<String?>(null) }
+
+            val firstVisibleId = notes.firstOrNull()?.id
+            LaunchedEffect(firstVisibleId) {
+                if (firstVisibleId != null) {
+                    if (lastKnownFirstId != null && firstVisibleId != lastKnownFirstId) {
+                        listState.animateScrollToItem(0)
+                    }
+                    lastKnownFirstId = firstVisibleId
+                }
+            }
+
             LazyColumn(
+                state = listState,
                 contentPadding = contentPadding,
                 modifier = Modifier.fillMaxSize()
             ) {
                 items(
-                    count = notes.itemCount,
-                    key = { index ->
-                        notes.peek(index)?.id ?: "placeholder-$index"
-                    }
-                ) { index ->
-                    val note = notes[index]
-                    if (note != null) {
-                        NoteRow(
-                            note = note,
-                            onDelete = { onDeleteNote(note.id) }
-                        )
-                    }
+                    items = notes,
+                    key = { note -> note.id }
+                ) { note ->
+                    NoteRow(
+                        note = note,
+                        onDelete = { onDeleteNote(note.id) }
+                    )
                 }
             }
         }
@@ -146,7 +160,19 @@ private fun NoteRow(
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Text(text = note.title, style = MaterialTheme.typography.titleMedium)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = note.title,
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.weight(1f)
+                )
+                IconButton(onClick = onDelete) {
+                    Icon(imageVector = Icons.Rounded.Delete, contentDescription = "Delete note")
+                }
+            }
             Text(
                 text = note.body,
                 style = MaterialTheme.typography.bodyMedium,
@@ -173,9 +199,6 @@ private fun NoteRow(
                 style = MaterialTheme.typography.bodySmall,
                 modifier = Modifier.padding(top = 8.dp)
             )
-            IconButton(onClick = onDelete, modifier = Modifier.align(Alignment.End)) {
-                Icon(imageVector = Icons.Rounded.Delete, contentDescription = "Delete note")
-            }
         }
     }
 }

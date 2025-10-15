@@ -1,9 +1,5 @@
 package com.sublime.trailnotes.data
 
-import androidx.paging.Pager
-import androidx.paging.PagingConfig
-import androidx.paging.PagingData
-import androidx.paging.map
 import com.sublime.trailnotes.data.local.NoteEntity
 import com.sublime.trailnotes.data.local.NotesDao
 import com.sublime.trailnotes.data.local.SyncState
@@ -26,13 +22,8 @@ class NotesRepository(
     private val clock: Clock
 ) {
 
-    fun pagedNotes(): Flow<PagingData<Note>> =
-        Pager(
-            config = PagingConfig(pageSize = 20, enablePlaceholders = false),
-            pagingSourceFactory = { dao.pagingSource() }
-        )
-            .flow
-            .map { pagingData -> pagingData.map { it.toDomain() } }
+    fun notes(): Flow<List<Note>> =
+        dao.observeAll().map { entities -> entities.map { it.toDomain() } }
 
     suspend fun createNote(title: String, body: String) {
         withContext(ioDispatcher) {
@@ -60,6 +51,7 @@ class NotesRepository(
 
     suspend fun runSync(): SyncResult = withContext(ioDispatcher) {
         val pending = dao.getPendingSync()
+        val pendingById = pending.associateBy { it.id }
         try {
             val pushed = if (pending.isNotEmpty()) {
                 api.upsertNotes(pending.map { it.toDto() })
@@ -68,7 +60,15 @@ class NotesRepository(
             }
 
             if (pending.isNotEmpty()) {
-                val updatedEntities = pushed.map { it.toEntity(SyncState.SYNCED) }
+                val updatedEntities = pushed.map { dto ->
+                    val entity = dto.toEntity(SyncState.SYNCED)
+                    val local = pendingById[dto.id]
+                    if (local != null) {
+                        entity.copy(updatedAt = maxOf(local.updatedAt, entity.updatedAt))
+                    } else {
+                        entity
+                    }
+                }
                 if (updatedEntities.isNotEmpty()) {
                     dao.upsert(updatedEntities)
                 }
