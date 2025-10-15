@@ -15,6 +15,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import java.time.ZoneId
 
 class NotesViewModel(
     private val repository: NotesRepository,
@@ -34,9 +35,13 @@ class NotesViewModel(
 
     fun addSampleNote() {
         viewModelScope.launch {
-            val timestamp = clock.instant()
-            val noteTitle = "Trail report ${timestamp.atZone(clock.zone).toLocalTime()}"
-            val noteBody = "Captured offline at ${formatInstant(timestamp)}"
+            val nowMillis = clock.millis()
+            val noteTitle = randomTitle()
+            val noteBody = buildString {
+                append(randomBody())
+                append("\n\nCaptured offline at ")
+                append(formatTimestamp(nowMillis))
+            }
             repository.createNote(noteTitle, noteBody)
             syncScheduler.triggerOneTimeSync()
         }
@@ -57,10 +62,33 @@ class NotesViewModel(
         syncScheduler.schedulePeriodicSync()
     }
 
-    private fun formatInstant(instant: Instant): String =
-        DateTimeFormatter.ofPattern("MMM d • HH:mm")
-            .withZone(clock.zone)
-            .format(instant)
+    private fun formatTimestamp(timestamp: Long): String =
+        captureFormatter.format(Instant.ofEpochMilli(timestamp))
+
+    private companion object {
+        private val captureFormatter = DateTimeFormatter.ofPattern("MMM d • HH:mm")
+            .withZone(ZoneId.systemDefault())
+
+        private val sampleTitles = listOf(
+            "Sunrise ridge sketch",
+            "Trailside reflections",
+            "Campsite checklist",
+            "Forest floor finds",
+            "Summit weather log"
+        )
+
+        private val sampleBodies = listOf(
+            "Jotted observations about the switchbacks and how the light shifted near the overlook.",
+            "Captured quick trail markers so the group can compare routes back at camp.",
+            "Logged notes on the ridge so we can plan a safe descent tomorrow.",
+            "Tracked the wildflowers clustered near the creek crossing for later identification.",
+            "Sketched the valley panorama to remember where the shortcut drops back onto the main path."
+        )
+
+        private fun randomTitle(): String = sampleTitles.random()
+
+        private fun randomBody(): String = sampleBodies.random()
+    }
 }
 
 data class NotesUiState(

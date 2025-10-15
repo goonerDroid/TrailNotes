@@ -51,19 +51,6 @@ class NotesRepository(
         }
     }
 
-    suspend fun updateNote(note: Note, title: String, body: String) {
-        withContext(ioDispatcher) {
-            val now = clock.millis()
-            val entity = note.copy(
-                title = title,
-                body = body,
-                updatedAt = now,
-                syncStatus = SyncState.PENDING
-            )
-            dao.upsert(entity.toEntity())
-        }
-    }
-
     suspend fun deleteNote(id: String) {
         withContext(ioDispatcher) {
             val now = clock.millis()
@@ -108,18 +95,6 @@ class NotesRepository(
     }
 
     fun lastSuccessfulSync(): Flow<Long?> = syncPreferences.lastSuccessfulSync
-
-    private fun Note.toEntity(): NoteEntity =
-        NoteEntity(
-            id = id,
-            title = title,
-            body = body,
-            createdAt = createdAt,
-            updatedAt = updatedAt,
-            deletedAt = deletedAt,
-            version = version,
-            syncStatus = syncStatus
-        )
 
     sealed interface SyncResult {
         data class Success(
